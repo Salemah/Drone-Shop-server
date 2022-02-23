@@ -17,7 +17,8 @@ async function run() {
       await client.connect();
       const database = client.db("droneshop");
       const dronesCollection = database.collection("drones");
-console.log('connection success');
+      const ordersCollection = database.collection("orders");
+// console.log('connection success');
       //drones get
       app.get('/alldrone',async(req,res)=>{
 
@@ -25,6 +26,16 @@ console.log('connection success');
         res.send(result);
         console.log(result);
       })
+      //add products
+      app.post('/addproducts', async (req, res) => {
+        const result = await dronesCollection.insertOne(req.body);
+        res.send(result);
+      });
+      //order
+      app.post('/orders', async (req, res) => {
+        const result = await ordersCollection.insertOne(req.body);
+        res.send(result);
+      });
       
       
     } 
