@@ -3,6 +3,7 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
 const app = express();
 const cors = require('cors');
+const ObjectId = require('mongodb').ObjectId;
 const port = process.env.PORT || 5000;
 
 app.use(cors());
@@ -84,7 +85,35 @@ async function run() {
       const updatedoc = { $set: { role: 'admin' } }
       const result = await usersCollection.updateOne(filter, updatedoc);
       res.send(result);
-})
+    })
+      //all order
+      app.get('/allorder', async (req, res) => {
+        const cursor = await ordersCollection.find({}).toArray();
+        res.send(cursor);
+      });
+      //DELETE APOI
+    app.delete("/order/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+
+      const result = await ordersCollection.deleteOne(query);
+      res.json(result);
+      console.log(result)
+    });
+    //put order status
+    app.put("/order/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "approved"
+        },
+      };
+      const result = await ordersCollection.updateOne(filter, updateDoc);
+      res.json(result);
+      console.log(result)
+    });
+
 
   }
   finally {
