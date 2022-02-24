@@ -5,9 +5,36 @@ const app = express();
 const cors = require('cors');
 const ObjectId = require('mongodb').ObjectId;
 const port = process.env.PORT || 5000;
+const admin = require("firebase-admin");
+
+const serviceAccount = require("./jst.json");
+
+
+
 
 app.use(cors());
 app.use(express.json());
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+async function verifyToken(req, res, next) {
+  if (req.headers?.authorization?.startsWith('Bearer ')) {
+    const token = req.headers.authorization.split(' ')[1]
+    try {
+      const decodedUser = await admin.auth().verifyIdToken(token);
+      req.decodedEmail = decodedUser.email;
+      console.log(req.decodedEmail);
+
+    }
+    catch {
+
+    }
+  }
+  next();
+}
+
 
 
 const uri = "mongodb+srv://mydb1:mydb1@cluster0.rojhc.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
@@ -20,6 +47,7 @@ async function run() {
     const dronesCollection = database.collection("drones");
     const ordersCollection = database.collection("orders");
     const usersCollection = database.collection("users");
+    const reviewCollection = database.collection("review");
     // console.log('connection success');
     //drones get
     app.get('/alldrone', async (req, res) => {
@@ -28,6 +56,16 @@ async function run() {
       res.send(result);
 
     })
+    //
+     //drones delete
+     app.delete("/product/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+
+      const result = await dronesCollection.deleteOne(query);
+      res.json(result);
+      console.log(result)
+    });
     //add products
     app.post('/addproducts', async (req, res) => {
       const result = await dronesCollection.insertOne(req.body);
@@ -79,12 +117,22 @@ async function run() {
       res.send({ admin: isAdmin });
 
     });
-    app.put('/users/makeadmin', async (req, res) => {
+    app.put('/users/makeadmin', verifyToken, async (req, res) => {
+     
       const user = req.body;
-      const filter = { email: user.email };
-      const updatedoc = { $set: { role: 'admin' } }
-      const result = await usersCollection.updateOne(filter, updatedoc);
-      res.send(result);
+      const requester = req.decodedEmail;
+      if (requester) {
+        const requesterAccount = await usersCollection.findOne({ email: requester });
+        if (requesterAccount.role === 'admin') {
+          const filter = { email: user.email };
+          const updatedoc = { $set: { role: 'admin' } }
+          const result = await usersCollection.updateOne(filter, updatedoc);
+          res.send(result);
+        }}
+        else {
+          res.status(403).json({ message: 'Acces denied' })
+        }
+   
     })
       //all order
       app.get('/allorder', async (req, res) => {
@@ -98,7 +146,7 @@ async function run() {
 
       const result = await ordersCollection.deleteOne(query);
       res.json(result);
-      console.log(result)
+    
     });
     //put order status
     app.put("/order/:id", async (req, res) => {
@@ -111,8 +159,22 @@ async function run() {
       };
       const result = await ordersCollection.updateOne(filter, updateDoc);
       res.json(result);
-      console.log(result)
+    
     });
+     //review post
+     app.post('/review', async (req, res) => {
+
+      const cursor = await reviewCollection.insertOne(req.body);
+      res.send(cursor);
+    });
+    //get review
+    app.get('/review', async (req, res) => {
+     
+
+      const result = await reviewCollection.find({}).toArray();
+      res.send(result);
+   
+    })
 
 
   }
