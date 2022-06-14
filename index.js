@@ -175,6 +175,17 @@ async function run() {
       res.send(result);
    
     })
+    //
+     //Update Product
+     app.put("/updateproduct", async (req, res) => {
+      const product = req.body;
+      const filter = { email: product._id };
+      const options = { upsert: true };
+      const updatedoc = { $set: product }
+      const result = await dronesCollection.updateOne(filter, updatedoc, options);
+      res.send(result);
+    
+    });
 
 
   }
